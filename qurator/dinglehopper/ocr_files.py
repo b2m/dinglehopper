@@ -55,19 +55,19 @@ def page_namespace(tree):
         raise ValueError('Not a PAGE tree')
 
 
-def page_extract(tree, *, textequiv_level='region', reading_order='reading_order'):
+def page_extract(tree, *, textequiv_level='region', **kwargs):
     """Extract text from the given PAGE content ElementTree."""
 
     nsmap = {'page': page_namespace(tree)}
 
-    regions = extract_regions_by_order_strategy(tree, nsmap, reading_order=reading_order)
+    regions = extract_regions_by_order_strategy(tree, nsmap, **kwargs)
     region_texts = [ExtractedText.from_text_segment(region, nsmap, textequiv_level=textequiv_level) for region in regions]
     region_texts = filter(lambda r: r.text != '', region_texts)
     return ExtractedText(None, region_texts, '\n', None)
 
 
-def page_text(tree, *, textequiv_level='region', reading_order='reading_order'):
-    return page_extract(tree, textequiv_level=textequiv_level, reading_order=reading_order).text
+def page_text(tree, *, textequiv_level='region', **kwargs):
+    return page_extract(tree, textequiv_level=textequiv_level, **kwargs).text
 
 
 def plain_extract(filename):
@@ -84,7 +84,7 @@ def plain_text(filename):
     return plain_extract(filename).text
 
 
-def extract(filename, *, textequiv_level='region', reading_order='reading_order'):
+def extract(filename, *, textequiv_level='region', **kwargs):
     """Extract the text from the given file.
 
     Supports PAGE, ALTO and falls back to plain text.
@@ -94,7 +94,7 @@ def extract(filename, *, textequiv_level='region', reading_order='reading_order'
     except XMLSyntaxError:
         return plain_extract(filename)
     try:
-        return page_extract(tree, textequiv_level=textequiv_level, reading_order=reading_order)
+        return page_extract(tree, textequiv_level=textequiv_level, **kwargs)
     except ValueError:
         return alto_extract(tree)
 

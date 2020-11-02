@@ -80,15 +80,18 @@ def gen_diff_report(gt_in, ocr_in, css_prefix, joiner, none):
         '''.format(gtx, ocrx)
 
 
-def process(gt, ocr, report_prefix, *, metrics=True, textequiv_level='region'):
+def process(gt, ocr, report_prefix, *, metrics=True, textequiv_level='region',
+            reading_order='reading_order', grid_direction='row', grid_size=10):
     """Check OCR result against GT.
 
-    The @click decorators change the signature of the decorated functions, so we keep this undecorated version and use
-    Click on a wrapper.
+    The @click decorators change the signature of the decorated functions,
+    so we keep this undecorated version and use Click on a wrapper.
     """
 
-    gt_text = extract(gt, textequiv_level=textequiv_level)
-    ocr_text = extract(ocr, textequiv_level=textequiv_level)
+    gt_text = extract(gt, textequiv_level=textequiv_level, reading_order=reading_order,
+                      grid_direction=grid_direction, grid_size=grid_size)
+    ocr_text = extract(ocr, textequiv_level=textequiv_level, reading_order=reading_order,
+                       grid_direction=grid_direction, grid_size=grid_size)
 
     cer, n_characters = character_error_rate_n(gt_text, ocr_text)
     wer, n_words = word_error_rate_n(gt_text, ocr_text)
@@ -135,8 +138,12 @@ def process(gt, ocr, report_prefix, *, metrics=True, textequiv_level='region'):
 @click.argument('report_prefix', type=click.Path(), default='report')
 @click.option('--metrics/--no-metrics', default=True, help='Enable/disable metrics and green/red')
 @click.option('--textequiv-level', default='region', help='PAGE TextEquiv level to extract text from', metavar='LEVEL')
+@click.option('--reading_order', default='region_order', help='Use PAGE ReadingOrder or calculate new reading order')
+@click.option('--grid_direction', default='row', help='Direction for reading order calculation via grid')
+@click.option('--grid_size', default='10', help='Grid size for reading order calculation via grid')
 @click.option('--progress', default=False, is_flag=True, help='Show progress bar')
-def main(gt, ocr, report_prefix, metrics, textequiv_level, progress):
+def main(gt, ocr, report_prefix, metrics, textequiv_level, reading_order, grid_direction,
+         grid_size, progress):
     """
     Compare the PAGE/ALTO/text document GT against the document OCR.
 
@@ -154,9 +161,15 @@ def main(gt, ocr, report_prefix, metrics, textequiv_level, progress):
 
     By default, the text of PAGE files is extracted on 'region' level. You may
     use "--textequiv-level line" to extract from the level of TextLine tags.
+
+    By default the reading order is extracted from the PAGE files. Alternatively
+    dinglehopper calculates a new reading order for the comparison!
+    For this use "--reading-order grid --grid-direction row --grid-size 10".
     """
     Config.progress = progress
-    process(gt, ocr, report_prefix, metrics=metrics, textequiv_level=textequiv_level)
+    process(gt, ocr, report_prefix, metrics=metrics, textequiv_level=textequiv_level,
+            reading_order=reading_order, grid_direction=grid_direction,
+            grid_size=grid_size)
 
 
 if __name__ == '__main__':

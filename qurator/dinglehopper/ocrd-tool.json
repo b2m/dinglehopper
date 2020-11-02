@@ -28,6 +28,23 @@
           "enum": ["region", "line"],
           "default": "region",
           "description": "PAGE XML hierarchy level to extract the text from"
+        },
+        "reading_order": {
+          "type": "string",
+          "enum": ["reading_order", "no_reading_order", "grid"],
+          "default": "reading_order",
+          "description": "Use the PAGE reading order or recalculate it via a grid."
+        },
+        "grid_direction": {
+          "type": "string",
+          "enum": ["row", "col"],
+          "default": "row",
+          "description": "The direction to use to recalculate the reading order."
+        },
+        "grid_size": {
+          "type": "integer",
+          "default": 10,
+          "description": "The grid size in pixel used to recalculate the reading order."
         }
       }
     }

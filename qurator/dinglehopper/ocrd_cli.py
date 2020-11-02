@@ -33,6 +33,9 @@ class OcrdDinglehopperEvaluate(Processor):
 
         metrics = self.parameter['metrics']
         textequiv_level = self.parameter['textequiv_level']
+        reading_order = self.parameter['reading_order']
+        grid_direction = self.parameter['grid_direction']
+        grid_size = self.parameter['grid_size']
         gt_grp, ocr_grp = self.input_file_grp.split(',')
 
         input_file_tuples = self._zip_input_files([gt_grp, ocr_grp])
@@ -59,7 +62,10 @@ class OcrdDinglehopperEvaluate(Processor):
                     ocr_file.local_filename,
                     report_prefix,
                     metrics=metrics,
-                    textequiv_level=textequiv_level
+                    textequiv_level=textequiv_level,
+                    reading_order=reading_order,
+                    grid_direction=grid_direction,
+                    grid_size=grid_size
             )
 
             # Add reports to the workspace

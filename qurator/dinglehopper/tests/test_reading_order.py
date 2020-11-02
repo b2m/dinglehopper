@@ -4,16 +4,14 @@ import pytest
 from lxml import etree as ET
 
 from ..reading_order import get_extraction_strategy, extract_regions_with_reading_order, \
-    extract_regions_without_reading_order, extract_regions_grid_col, \
-    extract_regions_grid_row, extract_coords, extract_img_dim, extract_top_left, Point, \
-    Dimension, map_point_to_grid
+    extract_regions_without_reading_order, extract_regions_grid, extract_coords, \
+    extract_img_dim, extract_top_left, Point, Dimension, map_point_to_grid
 
 
 @pytest.mark.parametrize("strategy_key,expected,expected_log", [
     (None, extract_regions_without_reading_order, None),
     ('reading_order', extract_regions_with_reading_order, None),
-    ('grid_col', extract_regions_grid_col, None),
-    ('grid_row', extract_regions_grid_row, None),
+    ('grid', extract_regions_grid, None),
     ('unknown_key', extract_regions_with_reading_order,
      "Unknown reading order extraction strategy"),
 ])
@@ -33,7 +31,7 @@ def expected_img_dim() -> Dimension:
 def expected_coords() -> Dict[str, str]:
     return {
         "r0": "300,450 300,400 350,400 350,450",
-        "r1": "500,650 500,600 550,600 550,650"
+        "r1": "100,650 100,600 150,600 150,650"
     }
 
 
@@ -66,15 +64,15 @@ def test_extract_top_left(expected_coords):
     assert top_left == Point(x=300, y=400)
 
     top_left = extract_top_left(expected_coords['r1'])
-    assert top_left == Point(x=500, y=600)
+    assert top_left == Point(x=100, y=600)
 
 
 @pytest.mark.parametrize("w,h,x,y,size,expected_id,expected_log", [
-    (35, 20, -10, -10, 10, 1, None),
+    (35, 20, -10, -10, 10, 1, "Negative coordinates not expected, set to 0."),
     (35, 20, 0, 0, 10, 1, None),
     (35, 20, 15, 12, 10, 6, None),
     (35, 20, 35, 20, 10, 8, None),
-    (35, 20, 70, 40, 10, 8, None)
+    (35, 20, 70, 40, 10, 8, "Point coordinates bigger than image, set to image size.")
 ])
 def test_map_point_to_grid(w, h, x, y, size, expected_id, expected_log, logcheck):
     img_dim = Dimension(width=w, height=h)
@@ -84,3 +82,20 @@ def test_map_point_to_grid(w, h, x, y, size, expected_id, expected_log, logcheck
     grid_id = map_point_to_grid(img_dim, point, grid_size=grid_size)
     assert grid_id == expected_id
     assert logcheck(expected_log)
+
+
+def test_map_point_to_grid_exception():
+    with pytest.raises(ValueError):
+        map_point_to_grid(Dimension(0, 0), Point(0, 0), grid_direction="unknown")
+
+
+def test_extraction_grid_row(xml_coords, xml_ns_map):
+    region_ids = extract_regions_grid(xml_coords, xml_ns_map, grid_direction="row")
+    assert region_ids == ["r0", "r1"]
+
+    region_ids = extract_regions_grid(xml_coords, xml_ns_map, grid_direction="col")
+    assert region_ids == ["r1", "r0"]
+
+    region_ids = extract_regions_grid(xml_coords, xml_ns_map, grid_direction="col",
+                                      grid_size=1000)
+    assert region_ids == ["r0", "r1"]
