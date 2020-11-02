@@ -1,13 +1,14 @@
 from __future__ import division, print_function
 
 from typing import Generator
-from warnings import warn
+
 import sys
 
 from lxml import etree as ET
 from lxml.etree import XMLSyntaxError
 
 from .extracted_text import ExtractedText, normalize_sbb
+from .reading_order import  extract_regions_by_order_strategy
 
 
 def alto_namespace(tree: ET.ElementTree) -> str:
@@ -54,41 +55,19 @@ def page_namespace(tree):
         raise ValueError('Not a PAGE tree')
 
 
-def page_extract(tree, *, textequiv_level='region'):
+def page_extract(tree, *, textequiv_level='region', reading_order='reading_order'):
     """Extract text from the given PAGE content ElementTree."""
-
-    # Internally, this is just parsing the Reading Order (if it exists) and
-    # and leaves reading the TextRegions to ExtractedText.from_text_segment().
 
     nsmap = {'page': page_namespace(tree)}
 
-    regions = []
-    reading_order = tree.find('.//page:ReadingOrder', namespaces=nsmap)
-    if reading_order is not None:
-        for group in reading_order.iterfind('./*', namespaces=nsmap):
-            if ET.QName(group.tag).localname == 'OrderedGroup':
-                region_ref_indexeds = group.findall('./page:RegionRefIndexed', namespaces=nsmap)
-                for region_ref_indexed in sorted(region_ref_indexeds, key=lambda r: int(r.attrib['index'])):
-                    region_id = region_ref_indexed.attrib['regionRef']
-                    region = tree.find('.//page:TextRegion[@id="%s"]' % region_id, namespaces=nsmap)
-                    if region is not None:
-                        regions.append(ExtractedText.from_text_segment(region, nsmap, textequiv_level=textequiv_level))
-                    else:
-                        pass  # Not a TextRegion
-            else:
-                raise NotImplementedError
-    else:
-        for region in tree.iterfind('.//page:TextRegion', namespaces=nsmap):
-            regions.append(ExtractedText.from_text_segment(region, nsmap, textequiv_level=textequiv_level))
-
-    # Filter empty region texts
-    regions = [r for r in regions if r.text != '']
-
-    return ExtractedText(None, regions, '\n', None)
+    regions = extract_regions_by_order_strategy(tree, nsmap, reading_order=reading_order)
+    region_texts = [ExtractedText.from_text_segment(region, nsmap, textequiv_level=textequiv_level) for region in regions]
+    region_texts = filter(lambda r: r.text != '', region_texts)
+    return ExtractedText(None, region_texts, '\n', None)
 
 
-def page_text(tree, *, textequiv_level='region'):
-    return page_extract(tree, textequiv_level=textequiv_level).text
+def page_text(tree, *, textequiv_level='region', reading_order='reading_order'):
+    return page_extract(tree, textequiv_level=textequiv_level, reading_order=reading_order).text
 
 
 def plain_extract(filename):
@@ -105,7 +84,7 @@ def plain_text(filename):
     return plain_extract(filename).text
 
 
-def extract(filename, *, textequiv_level='region'):
+def extract(filename, *, textequiv_level='region', reading_order='reading_order'):
     """Extract the text from the given file.
 
     Supports PAGE, ALTO and falls back to plain text.
@@ -115,7 +94,7 @@ def extract(filename, *, textequiv_level='region'):
     except XMLSyntaxError:
         return plain_extract(filename)
     try:
-        return page_extract(tree, textequiv_level=textequiv_level)
+        return page_extract(tree, textequiv_level=textequiv_level, reading_order=reading_order)
     except ValueError:
         return alto_extract(tree)
 
