@@ -90,29 +90,25 @@ def test_align():
      "No index attributes, use 'conf' attribute to sort TextEquiv"),
     (['', ''], 0, "No index attributes, use first TextEquiv"),
 ])
-def test_textequiv(attributes, expected_index, expected_log, caplog):
+def test_textequiv(attributes, expected_index, expected_log, xml_ns, caplog, logcheck):
     """Test that extracting text from a PAGE TextEquiv is working without index attr."""
     caplog.set_level(logging.INFO)
     xml = "<?xml version=\"1.0\"?>"
-    ns = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2018-07-15"
     text = ["Text {0}".format(i) for i in range(len(attributes) + 1)]
 
     equiv = ["<TextEquiv {0}><Unicode>{1}</Unicode></TextEquiv>".format(attr, text[i])
              for i, attr in enumerate(attributes)]
 
     textline = "{0}<TextLine id=\"l3\" xmlns=\"{1}\">{2}</TextLine>"
-    textline = textline.format(xml, ns, ''.join(equiv))
+    textline = textline.format(xml, xml_ns, ''.join(equiv))
 
     root = ET.fromstring(textline)
     result = ExtractedText.from_text_segment(root,
-                                             {'page': ns},
+                                             {'page': xml_ns},
                                              textequiv_level='line').text
     if expected_index is None:
         assert not result
     else:
         assert result == text[expected_index]
 
-    if expected_log is None:
-        assert "no_index" not in caplog.text
-    else:
-        assert expected_log in caplog.text
+    assert logcheck(expected_log)

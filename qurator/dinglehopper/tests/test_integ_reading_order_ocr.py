@@ -25,16 +25,13 @@ def test_recalculation_of_reading_order():
     ('table-order-0001.xml', 'reading_order', "1\n2\n3\n4\n5\n6\n7\n8\n9", None),
     ('table-order-0001.xml', None, "5\n6\n7\n8\n9\n1\n2\n3\n4", None),
     ('table-no-reading-order.xml', 'reading_order', "5\n6\n7\n8\n9\n1\n2\n3\n4",
-     "No reading order, extract without."),
+     "No2 reading order, extract without."),
 ])
 @pytest.mark.integration
-def test_reading_order_settings(file, reading_order, expected_text, expected_log, caplog):
+def test_reading_order_settings(file, reading_order, expected_text, expected_log, checklog):
     ocr = page_text(ET.parse(os.path.join(data_dir, file)), reading_order=reading_order)
     assert ocr == expected_text
-    if expected_log:
-        assert expected_log in caplog.text
-    else:
-        assert not caplog.text
+    checklog(expected_log)
 
 
 @pytest.mark.integration

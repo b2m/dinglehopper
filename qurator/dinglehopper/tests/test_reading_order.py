@@ -17,24 +17,11 @@ from ..reading_order import get_extraction_strategy, extract_regions_with_readin
     ('unknown_key', extract_regions_with_reading_order,
      "Unknown reading order extraction strategy"),
 ])
-def test_get_extraction_strategy(strategy_key, expected, expected_log, caplog):
+def test_get_extraction_strategy(strategy_key, expected, expected_log, logcheck):
     strategy = get_extraction_strategy(strategy_key)
 
     assert strategy == expected
-    if expected_log:
-        assert expected_log in caplog.text
-    else:
-        assert not caplog.text
-
-
-@pytest.fixture
-def xml_ns() -> str:
-    return "http://schema.primaresearch.org/PAGE/gts/pagecontent/2018-07-15"
-
-
-@pytest.fixture
-def xml_ns_map(xml_ns) -> Dict[str, str]:
-    return {'page': xml_ns}
+    assert logcheck(expected_log)
 
 
 @pytest.fixture
@@ -82,17 +69,18 @@ def test_extract_top_left(expected_coords):
     assert top_left == Point(x=500, y=600)
 
 
-@pytest.mark.parametrize("width,height,x,y,size,expected_id", [
-    (35, 20, -10, -10, 10, 1),
-    (35, 20, 0, 0, 10, 1),
-    (35, 20, 15, 12, 10, 6),
-    (35, 20, 35, 20, 10, 8),
-    (35, 20, 70, 40, 10, 8)
+@pytest.mark.parametrize("w,h,x,y,size,expected_id,expected_log", [
+    (35, 20, -10, -10, 10, 1, None),
+    (35, 20, 0, 0, 10, 1, None),
+    (35, 20, 15, 12, 10, 6, None),
+    (35, 20, 35, 20, 10, 8, None),
+    (35, 20, 70, 40, 10, 8, None)
 ])
-def test_map_point_to_grid(width, height, x, y, size, expected_id):
-    img_dim = Dimension(width=width, height=height)
+def test_map_point_to_grid(w, h, x, y, size, expected_id, expected_log, logcheck):
+    img_dim = Dimension(width=w, height=h)
     point = Point(x=x, y=y)
     grid_size = size
 
     grid_id = map_point_to_grid(img_dim, point, grid_size=grid_size)
     assert grid_id == expected_id
+    assert logcheck(expected_log)

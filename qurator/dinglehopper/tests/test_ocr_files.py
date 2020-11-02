@@ -42,9 +42,9 @@ def test_alto_text_ALTO3():
     assert "über die vielen Sorgen wegen deſſelben vergaß" in alto_text(tree)
 
 
-def test_page_namespace():
+def test_page_namespace(xml_ns):
     tree = ET.parse(os.path.join(data_dir, 'test.page2018.xml'))
-    assert page_namespace(tree) == 'http://schema.primaresearch.org/PAGE/gts/pagecontent/2018-07-15'
+    assert page_namespace(tree) == xml_ns
 
 
 def test_page_test():
