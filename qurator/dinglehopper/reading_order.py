@@ -1,8 +1,13 @@
-from lxml import etree as et
+import math
+from collections import namedtuple
 
+from lxml import etree as ET
 from ocrd_utils import getLogger
 
 LOG = getLogger('processor.OcrdDinglehopperEvaluate')
+
+Point = namedtuple('Point', ['x', 'y'])
+Dimension = namedtuple('Dimension', ['height', 'width'])
 
 
 def extract_regions_by_order_strategy(tree, nsmap, reading_order='reading_order'):
@@ -17,7 +22,8 @@ def extract_regions_by_order_strategy(tree, nsmap, reading_order='reading_order'
 def get_extraction_strategy(reading_order):
     strategies = {
         None: extract_regions_without_reading_order,
-        "no_reading_order": extract_regions_without_reading_order,
+        "grid_col": extract_regions_grid_col,
+        "grid_row": extract_regions_grid_row,
         "reading_order": extract_regions_with_reading_order
     }
     if reading_order not in strategies.keys():
@@ -36,7 +42,7 @@ def extract_regions_with_reading_order(tree, nsmap):
         return extract_regions_without_reading_order(tree, nsmap)
 
     for group in reading_order.iterfind('./*', namespaces=nsmap):
-        if et.QName(group.tag).localname != 'OrderedGroup':
+        if ET.QName(group.tag).localname != 'OrderedGroup':
             raise NotImplementedError
 
         region_ref_indexeds = group.findall('./page:RegionRefIndexed', namespaces=nsmap)
@@ -51,3 +57,39 @@ def extract_regions_without_reading_order(tree, nsmap):
     region_ids = [r.attrib['id'] for r in
                   tree.iterfind('.//page:TextRegion', namespaces=nsmap)]
     return region_ids
+
+
+def extract_regions_grid_col(tree, nsmap):
+    return None
+
+
+def extract_regions_grid_row(tree, nsmap):
+    return None
+
+
+def extract_coords(tree, nsmap):
+    regions = tree.findall('.//page:TextRegion', namespaces=nsmap)
+    return {r.attrib['id']: r.find('page:Coords', namespaces=nsmap).attrib['points'] for r
+            in regions}
+
+
+def extract_img_dim(tree, nsmap) -> Dimension:
+    page = tree.find('page:Page', namespaces=nsmap)
+    return Dimension(width=int(page.attrib["imageWidth"]),
+                     height=int(page.attrib['imageHeight']))
+
+
+def extract_top_left(coords: str) -> Point:
+    points = coords.split(' ')
+    points = [point.split(",") for point in points]
+    points = [(int(x), int(y)) for x, y in points]
+    x, y = zip(*points)
+    return Point(x=min(x), y=min(y))
+
+
+def map_point_to_grid(img_dim: Dimension, point: Point, grid_size: int = 10) -> int:
+    x, y = min(max(0, point.x), img_dim.width), min(max(0, point.y), img_dim.height)
+    grid_id = math.ceil(img_dim.width / grid_size) \
+              * max(0, (math.ceil(y / grid_size) - 1)) \
+              + math.ceil(x / grid_size)
+    return max(1, grid_id)
